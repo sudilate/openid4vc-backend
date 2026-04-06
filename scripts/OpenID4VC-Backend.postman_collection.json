@@ -1,0 +1,898 @@
+{
+  "info": {
+    "name": "OpenID4VC Backend - End-to-End Flow",
+    "description": "Complete Postman collection for tenant → API key → issuance → revoke flow\n\n## Setup Instructions\n\n1. Import this collection into Postman\n2. Create a Postman environment with these variables:\n   - `base_url`: http://localhost:3000\n   - `master_api_key`: (your master API key if configured)\n   - `dev_tenant_id`: (for dev mode auth)\n   - `dev_role`: super_admin\n   - `dev_principal`: admin\n\n3. Run the requests in order - IDs will be captured in environment variables\n\n## Flow Overview\n\n1. **Health Check** - Verify API is running\n2. **Create Tenant** - Create a new tenant (SuperAdmin)\n3. **Create API Keys** - Generate keys for IssuerManager and TenantAdmin roles\n4. **Create Credential Definition** - Define a credential schema\n5. **Create Offer** - Generate a credential offer\n6. **OID4VCI Flow** - Wallet interaction endpoints\n7. **Revoke Credential** - Revoke an issued credential\n\n## Roles & Permissions\n\n- `super_admin`: Full access\n- `tenant_admin`: Manage credentials, revocation\n- `issuer_manager`: Create offers, issue credentials\n- `verifier`: Create verification requests\n- `readonly`: Read-only access\n- `api_client`: Webhook access only",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "master_api_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dev_tenant_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "string"
+    },
+    {
+      "key": "dev_role",
+      "value": "super_admin",
+      "type": "string"
+    },
+    {
+      "key": "dev_principal",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "tenant_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenant_slug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "issuer_api_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_api_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "verifier_api_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "credential_def_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "issuance_session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "credential_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Health & Monitoring",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the API is healthy and running"
+          },
+          "response": []
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ready",
+              "host": ["{{base_url}}"],
+              "path": ["ready"]
+            },
+            "description": "Check if the API is ready to accept requests"
+          },
+          "response": []
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["metrics"]
+            },
+            "description": "Get Prometheus metrics"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Tenant Management",
+      "item": [
+        {
+          "name": "Create Tenant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"tenant_id\", jsonData.id);",
+                  "pm.environment.set(\"tenant_slug\", jsonData.slug || 'example-tenant');",
+                  "console.log(\"Tenant ID: \" + jsonData.id);",
+                  "console.log(\"Tenant Slug: \" + (jsonData.slug || 'example-tenant'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{master_api_key}}",
+                "description": "Use master key or dev headers",
+                "disabled": true
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{dev_tenant_id}}"
+              },
+              {
+                "key": "X-Role",
+                "value": "{{dev_role}}"
+              },
+              {
+                "key": "X-Principal",
+                "value": "{{dev_principal}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Example University\",\n    \"slug\": \"example-university\",\n    \"database_url\": \"postgresql://postgres:postgres@localhost:5432/tenant_example\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tenants"]
+            },
+            "description": "Create a new tenant. Requires SuperAdmin role.\n\nResponse will automatically capture tenant_id and tenant_slug in environment variables."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - API Key Management",
+      "item": [
+        {
+          "name": "Create IssuerManager API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.api_key) {",
+                  "    pm.environment.set(\"issuer_api_key\", jsonData.api_key);",
+                  "    console.log(\"Issuer API Key: \" + jsonData.api_key);",
+                  "    console.log(\"⚠️ SAVE THIS KEY - it will not be shown again!\");",
+                  "} else {",
+                  "    console.log(\"Response: \" + JSON.stringify(jsonData));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{master_api_key}}",
+                "disabled": true
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{dev_tenant_id}}"
+              },
+              {
+                "key": "X-Role",
+                "value": "{{dev_role}}"
+              },
+              {
+                "key": "X-Principal",
+                "value": "{{dev_principal}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Issuer Manager Key\",\n    \"role\": \"issuer_manager\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/api-keys",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tenants", "{{tenant_id}}", "api-keys"]
+            },
+            "description": "Create API key with IssuerManager role for issuance operations.\n\n⚠️ The api_key in the response is shown ONLY ONCE. Save it immediately!"
+          },
+          "response": []
+        },
+        {
+          "name": "Create TenantAdmin API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.api_key) {",
+                  "    pm.environment.set(\"admin_api_key\", jsonData.api_key);",
+                  "    console.log(\"Admin API Key: \" + jsonData.api_key);",
+                  "    console.log(\"⚠️ SAVE THIS KEY - it will not be shown again!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{dev_tenant_id}}"
+              },
+              {
+                "key": "X-Role",
+                "value": "{{dev_role}}"
+              },
+              {
+                "key": "X-Principal",
+                "value": "{{dev_principal}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Tenant Admin Key\",\n    \"role\": \"tenant_admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/api-keys",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tenants", "{{tenant_id}}", "api-keys"]
+            },
+            "description": "Create API key with TenantAdmin role for credential management and revocation."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Verifier API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.api_key) {",
+                  "    pm.environment.set(\"verifier_api_key\", jsonData.api_key);",
+                  "    console.log(\"Verifier API Key: \" + jsonData.api_key);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{dev_tenant_id}}"
+              },
+              {
+                "key": "X-Role",
+                "value": "{{dev_role}}"
+              },
+              {
+                "key": "X-Principal",
+                "value": "{{dev_principal}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Verifier Key\",\n    \"role\": \"verifier\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/api-keys",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tenants", "{{tenant_id}}", "api-keys"]
+            },
+            "description": "Create API key with Verifier role for verification operations."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Issuance Flow",
+      "item": [
+        {
+          "name": "Create Credential Definition",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"credential_def_id\", jsonData.id);",
+                  "console.log(\"Credential Definition ID: \" + jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{issuer_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"UniversityDegree\",\n    \"format\": \"jwt_vc_json\",\n    \"schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"credentialSubject\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"degree\": {\n                        \"type\": \"object\",\n                        \"properties\": {\n                            \"type\": {\"type\": \"string\"},\n                            \"name\": {\"type\": \"string\"}\n                        },\n                        \"required\": [\"type\", \"name\"]\n                    },\n                    \"university\": {\"type\": \"string\"},\n                    \"graduationDate\": {\"type\": \"string\", \"format\": \"date\"}\n                },\n                \"required\": [\"degree\", \"university\"]\n            }\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/issuer/credential-definitions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "issuer", "credential-definitions"]
+            },
+            "description": "Create a credential definition. Requires IssuerManager role.\n\nSupported formats:\n- `jwt_vc_json` - JWT Verifiable Credentials\n- `ldp_vc` - Linked Data Proof Verifiable Credentials"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Credential Offer (Inline)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"issuance_session_id\", jsonData.issuance_session_id);",
+                  "console.log(\"Issuance Session ID: \" + jsonData.issuance_session_id);",
+                  "console.log(\"Offer URL: \" + jsonData.offer_url);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{issuer_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"credential_definition_id\": \"{{credential_def_id}}\",\n    \"by_reference\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/issuer/offers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "issuer", "offers"]
+            },
+            "description": "Create a credential offer with inline credential data.\n\nSet `by_reference: true` to get a reference URL instead."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Credential Offer (By Reference)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{issuer_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"credential_definition_id\": \"{{credential_def_id}}\",\n    \"by_reference\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/issuer/offers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "issuer", "offers"]
+            },
+            "description": "Create a credential offer with by-reference URL."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - OID4VCI Protocol (Public)",
+      "item": [
+        {
+          "name": "OAuth Authorization Server Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/oid4vci/{{tenant_slug}}/.well-known/oauth-authorization-server",
+              "host": ["{{base_url}}"],
+              "path": ["oid4vci", "{{tenant_slug}}", ".well-known", "oauth-authorization-server"]
+            },
+            "description": "Get OAuth authorization server metadata. No authentication required."
+          },
+          "response": []
+        },
+        {
+          "name": "OpenID Credential Issuer Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/oid4vci/{{tenant_slug}}/.well-known/openid-credential-issuer",
+              "host": ["{{base_url}}"],
+              "path": ["oid4vci", "{{tenant_slug}}", ".well-known", "openid-credential-issuer"]
+            },
+            "description": "Get OpenID credential issuer metadata. No authentication required."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Credential Offer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/oid4vci/{{tenant_slug}}/credential_offer?issuance_session_id={{issuance_session_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["oid4vci", "{{tenant_slug}}", "credential_offer"],
+              "query": [
+                {
+                  "key": "issuance_session_id",
+                  "value": "{{issuance_session_id}}"
+                }
+              ]
+            },
+            "description": "Fetch credential offer by session ID. No authentication required."
+          },
+          "response": []
+        },
+        {
+          "name": "Pushed Authorization Request (PAR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "response_type",
+                  "value": "code"
+                },
+                {
+                  "key": "client_id",
+                  "value": "wallet-client-id"
+                },
+                {
+                  "key": "code_challenge",
+                  "value": "challenge123"
+                },
+                {
+                  "key": "code_challenge_method",
+                  "value": "S256"
+                },
+                {
+                  "key": "authorization_details",
+                  "value": "[{\"type\":\"openid_credential\"}]"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/oid4vci/{{tenant_slug}}/par",
+              "host": ["{{base_url}}"],
+              "path": ["oid4vci", "{{tenant_slug}}", "par"]
+            },
+            "description": "Pushed Authorization Request endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Authorization Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/oid4vci/{{tenant_slug}}/authorize?response_type=code&client_id=wallet-client-id&redirect_uri=app%3A%2F%2Fcallback&scope=openid",
+              "host": ["{{base_url}}"],
+              "path": ["oid4vci", "{{tenant_slug}}", "authorize"],
+              "query": [
+                {
+                  "key": "response_type",
+                  "value": "code"
+                },
+                {
+                  "key": "client_id",
+                  "value": "wallet-client-id"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "app://callback"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid"
+                }
+              ]
+            },
+            "description": "Authorization endpoint (typically redirects to wallet)."
+          },
+          "response": []
+        },
+        {
+          "name": "Token Endpoint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "authorization_code"
+                },
+                {
+                  "key": "code",
+                  "value": "AUTHORIZATION_CODE"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "app://callback"
+                },
+                {
+                  "key": "client_id",
+                  "value": "wallet-client-id"
+                },
+                {
+                  "key": "code_verifier",
+                  "value": "verifier123"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/oid4vci/{{tenant_slug}}/token",
+              "host": ["{{base_url}}"],
+              "path": ["oid4vci", "{{tenant_slug}}", "token"]
+            },
+            "description": "Exchange authorization code for access token."
+          },
+          "response": []
+        },
+        {
+          "name": "Credential Endpoint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer ACCESS_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"format\": \"jwt_vc_json\",\n    \"types\": [\"UniversityDegree\"],\n    \"proof\": {\n        \"proof_type\": \"jwt\",\n        \"jwt\": \"PROOF_JWT\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/oid4vci/{{tenant_slug}}/credential",
+              "host": ["{{base_url}}"],
+              "path": ["oid4vci", "{{tenant_slug}}", "credential"]
+            },
+            "description": "Request credential with access token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - Verification Flow",
+      "item": [
+        {
+          "name": "Create Presentation Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.verification_session_id) {",
+                  "    pm.environment.set(\"verification_session_id\", jsonData.verification_session_id);",
+                  "    console.log(\"Verification Session ID: \" + jsonData.verification_session_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{verifier_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"credential_types\": [\"UniversityDegree\"],\n    \"claims\": [\"degree.name\", \"university\", \"graduationDate\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/verifier/requests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "verifier", "requests"]
+            },
+            "description": "Create a presentation request for verification. Requires Verifier role."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 - Revocation",
+      "item": [
+        {
+          "name": "Revoke Credential",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{admin_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reason\": \"Key compromise\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/issuer/issued/{{credential_id}}/revoke",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "issuer", "issued", "{{credential_id}}", "revoke"]
+            },
+            "description": "Revoke an issued credential. Requires TenantAdmin role.\n\nCommon reasons:\n- Key compromise\n- Lost or stolen device\n- Affiliation terminated\n- Administrative revocation\n\nNote: You need the credential_id from the issuance flow."
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke - Lost Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{admin_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reason\": \"Lost or stolen device\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/issuer/issued/{{credential_id}}/revoke",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "issuer", "issued", "{{credential_id}}", "revoke"]
+            },
+            "description": "Revoke due to lost or stolen device."
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke - Affiliation Terminated",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{admin_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reason\": \"Affiliation terminated\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/issuer/issued/{{credential_id}}/revoke",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "issuer", "issued", "{{credential_id}}", "revoke"]
+            },
+            "description": "Revoke due to affiliation termination."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08 - Key Management",
+      "item": [
+        {
+          "name": "Rotate Primary Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{admin_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/keys/rotate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "keys", "rotate"]
+            },
+            "description": "Rotate the tenant's primary signing key. Requires TenantAdmin role."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "09 - Utilities",
+      "item": [
+        {
+          "name": "Resolve DID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/did/resolve?did=did:key:z123456789",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "did", "resolve"],
+              "query": [
+                {
+                  "key": "did",
+                  "value": "did:key:z123456789"
+                }
+              ]
+            },
+            "description": "Resolve a DID to its document. Public endpoint - no auth required."
+          },
+          "response": []
+        },
+        {
+          "name": "Audit Event Stream (SSE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              },
+              {
+                "key": "X-Api-Key",
+                "value": "{{admin_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/audit/stream",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "audit", "stream"]
+            },
+            "description": "Subscribe to audit events via Server-Sent Events (SSE). Requires authentication."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Log request details for debugging",
+          "console.log('Request: ' + pm.request.method + ' ' + pm.request.url.toString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Basic response validation",
+          "pm.test('Status code is valid', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204]);",
+          "});",
+          "",
+          "pm.test('Response is valid JSON', function () {",
+          "    pm.response.to.be.json;",
+          "});"
+        ]
+      }
+    }
+  ]
+}

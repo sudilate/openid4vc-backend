@@ -152,7 +152,7 @@ impl AuthorizationService {
 }
 
 impl Role {
-    fn as_policy_str(self) -> &'static str {
+    pub fn as_policy_str(self) -> &'static str {
         match self {
             Role::SuperAdmin => "super_admin",
             Role::TenantAdmin => "tenant_admin",
@@ -161,6 +161,18 @@ impl Role {
             Role::ReadOnly => "readonly",
             Role::ApiClient => "api_client",
         }
+    }
+}
+
+pub fn role_from_str(raw: &str) -> Option<Role> {
+    match raw {
+        "super_admin" => Some(Role::SuperAdmin),
+        "tenant_admin" => Some(Role::TenantAdmin),
+        "issuer_manager" => Some(Role::IssuerManager),
+        "verifier" => Some(Role::Verifier),
+        "readonly" => Some(Role::ReadOnly),
+        "api_client" => Some(Role::ApiClient),
+        _ => None,
     }
 }
 

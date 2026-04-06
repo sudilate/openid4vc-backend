@@ -1,7 +1,9 @@
+pub mod audit;
 pub mod did;
 pub mod health;
 pub mod issuer;
 pub mod keys;
+pub mod metrics;
 pub mod openid4vci;
 pub mod tenant;
 pub mod verifier;
@@ -15,7 +17,13 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health::health))
         .route("/ready", get(health::ready))
+        .route("/metrics", get(metrics::metrics))
+        .route("/api/v1/audit/stream", get(audit::stream))
         .route("/api/v1/tenants", post(tenant::create_tenant))
+        .route(
+            "/api/v1/tenants/{tenant_id}/api-keys",
+            post(tenant::create_api_key),
+        )
         .route("/api/v1/did/resolve", get(did::resolve_did))
         .route("/api/v1/keys/rotate", post(keys::rotate_primary_key))
         .route(

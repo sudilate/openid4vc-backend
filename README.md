@@ -28,6 +28,7 @@ docker compose up -d postgres redis vault
 ```bash
 psql "postgres://postgres:postgres@localhost:5432/openid4vc_admin" -f migrations/001_admin_schema.sql
 psql "postgres://postgres:postgres@localhost:5432/openid4vc_admin" -f migrations/003_admin_keys.sql
+psql "postgres://postgres:postgres@localhost:5432/openid4vc_admin" -f migrations/005_admin_auth_audit.sql
 ```
 
 3. Create a tenant database and run tenant schema migration:
@@ -54,7 +55,10 @@ curl http://localhost:8080/health
 
 - `GET /health`
 - `GET /ready`
+- `GET /metrics`
 - `POST /api/v1/tenants`
+- `POST /api/v1/tenants/{tenant_id}/api-keys`
+- `GET /api/v1/audit/stream` (SSE)
 - `GET /api/v1/did/resolve?did=did:web:example.com`
 - `POST /api/v1/keys/rotate`
 - `POST /api/v1/issuer/credential-definitions`

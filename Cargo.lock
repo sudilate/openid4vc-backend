@@ -3990,7 +3990,7 @@ dependencies = [
  "iota-metrics",
  "iota-types",
  "parking_lot 0.12.5",
- "prometheus",
+ "prometheus 0.14.0",
  "rand 0.8.5",
  "reqwest 0.12.28",
  "snap",
@@ -4019,7 +4019,7 @@ dependencies = [
  "move-vm-config",
  "object_store",
  "once_cell",
- "prometheus",
+ "prometheus 0.14.0",
  "rand 0.8.5",
  "reqwest 0.12.28",
  "serde",
@@ -4097,7 +4097,7 @@ dependencies = [
  "iota-execution",
  "iota-protocol-config",
  "iota-types",
- "prometheus",
+ "prometheus 0.14.0",
 ]
 
 [[package]]
@@ -4152,7 +4152,7 @@ dependencies = [
  "iota-types",
  "jsonrpsee",
  "once_cell",
- "prometheus",
+ "prometheus 0.14.0",
  "tap",
  "tracing",
 ]
@@ -4238,7 +4238,7 @@ dependencies = [
  "futures",
  "once_cell",
  "parking_lot 0.12.5",
- "prometheus",
+ "prometheus 0.14.0",
  "prometheus-closure-metric",
  "scopeguard",
  "simple-server-timing-header",
@@ -4409,7 +4409,7 @@ dependencies = [
  "mime",
  "move-binary-format",
  "openapiv3",
- "prometheus",
+ "prometheus 0.14.0",
  "reqwest 0.12.28",
  "schemars 0.8.22",
  "serde",
@@ -4571,7 +4571,7 @@ dependencies = [
  "once_cell",
  "parking_lot 0.12.5",
  "passkey-types",
- "prometheus",
+ "prometheus 0.14.0",
  "prost-types",
  "rand 0.8.5",
  "roaring",
@@ -6527,6 +6527,7 @@ dependencies = [
  "argon2",
  "async-trait",
  "axum 0.8.8",
+ "base64 0.22.1",
  "chrono",
  "config",
  "dashmap 6.1.0",
@@ -6541,7 +6542,9 @@ dependencies = [
  "oid4vc-manager",
  "oid4vci",
  "oid4vp",
+ "once_cell",
  "oso",
+ "prometheus 0.13.4",
  "rand 0.8.5",
  "redis",
  "reqwest 0.12.28",
@@ -6552,6 +6555,7 @@ dependencies = [
  "sqlx",
  "thiserror 1.0.69",
  "tokio",
+ "tokio-stream",
  "tokio-test",
  "tower 0.5.3",
  "tower-http 0.6.8",
@@ -7438,6 +7442,21 @@ dependencies = [
 
 [[package]]
 name = "prometheus"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d33c28a30771f7f96db69893f78b857f7450d7e0237e9c8fc6427a81bae7ed1"
+dependencies = [
+ "cfg-if",
+ "fnv",
+ "lazy_static",
+ "memchr",
+ "parking_lot 0.12.5",
+ "protobuf 2.28.0",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "prometheus"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ca5326d8d0b950a9acd87e6a3f94745394f62e4dae1b1ee22b2bc0c394af43a"
@@ -7447,7 +7466,7 @@ dependencies = [
  "lazy_static",
  "memchr",
  "parking_lot 0.12.5",
- "protobuf",
+ "protobuf 3.7.2",
  "thiserror 2.0.18",
 ]
 
@@ -7457,7 +7476,7 @@ version = "1.16.2"
 source = "git+https://github.com/iotaledger/iota.git?tag=v1.16.2#ec7bb7ef1481feaa9841f7e468866ea6121f6204"
 dependencies = [
  "anyhow",
- "prometheus",
+ "prometheus 0.14.0",
 ]
 
 [[package]]
@@ -7491,6 +7510,12 @@ checksum = "8991c4cbdb8bc5b11f0b074ffe286c30e523de90fee5ba8132f1399f23cb3dd7"
 dependencies = [
  "prost",
 ]
+
+[[package]]
+name = "protobuf"
+version = "2.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
 
 [[package]]
 name = "protobuf"

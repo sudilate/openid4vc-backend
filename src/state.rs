@@ -5,6 +5,7 @@ use sqlx::PgPool;
 
 use crate::auth::authorization::AuthorizationService;
 use crate::config::Settings;
+use crate::services::audit::AuditService;
 use crate::services::did_resolver::DidResolverRegistry;
 use crate::services::key_management::KeyManagementService;
 use crate::services::oid4vci_runtime::Oid4vciRuntimeRegistry;
@@ -19,5 +20,6 @@ pub struct AppState {
     pub oid4vci_registry: Arc<Oid4vciRuntimeRegistry>,
     pub key_management: Arc<KeyManagementService>,
     pub did_registry: Arc<DidResolverRegistry>,
+    pub audit: Arc<AuditService>,
     pub authorization: Arc<AuthorizationService>,
 }

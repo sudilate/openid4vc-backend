@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
+use base64::Engine;
 use dashmap::DashMap;
 use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
@@ -9,6 +10,7 @@ use oid4vc_manager::managers::credential_issuer::CredentialIssuerManager;
 use oid4vc_manager::storage::Storage;
 use oid4vci::VerifiableCredentialJwt;
 use oid4vci::authorization_response::AuthorizationResponse;
+use oid4vci::credential_format_profiles::CredentialFormats;
 use oid4vci::credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject;
 use oid4vci::credential_offer::{AuthorizationCode, PreAuthorizedCode};
 use oid4vci::credential_response::{
@@ -176,23 +178,47 @@ impl Storage for RuntimeStorage {
             }
         });
 
-        let jwt_vc = block_on(async {
-            jwt::encode(
-                signer.clone(),
-                Header::new(Algorithm::EdDSA),
-                VerifiableCredentialJwt::builder()
-                    .sub(subject_did.clone())
-                    .iss(issuer_did.clone())
-                    .iat(0)
-                    .exp(9_999_999_999_i64)
-                    .verifiable_credential(claims.clone())
-                    .build()
-                    .ok(),
-                "did:key",
-            )
-            .await
-            .ok()
-        })?;
+        let credential_config = inner
+            .credential_configs
+            .get(&credential_configuration_id)
+            .cloned()?;
+
+        let jwt_vc = match credential_config.credential_format.format() {
+            CredentialFormats::JwtVcJson(_)
+            | CredentialFormats::JwtVcJsonLd(_)
+            | CredentialFormats::LdpVc(_) => block_on(async {
+                jwt::encode(
+                    signer.clone(),
+                    Header::new(Algorithm::EdDSA),
+                    VerifiableCredentialJwt::builder()
+                        .sub(subject_did.clone())
+                        .iss(issuer_did.clone())
+                        .iat(0)
+                        .exp(9_999_999_999_i64)
+                        .verifiable_credential(claims.clone())
+                        .build()
+                        .ok(),
+                    "did:key",
+                )
+                .await
+                .ok()
+            })?,
+            CredentialFormats::DcSdJwt(_) | CredentialFormats::VcSdJwt(_) => {
+                let disclosed = serde_json::to_string(&claims).ok()?;
+                format!("sd-jwt~{}~{}", Uuid::new_v4(), disclosed)
+            }
+            CredentialFormats::MsoMdoc(_) => {
+                let mdoc_payload = serde_json::json!({
+                    "docType": "org.iso.18013.5.1.mDL",
+                    "issuer": issuer_did,
+                    "subject": subject_did,
+                    "claims": claims
+                });
+                base64::engine::general_purpose::STANDARD
+                    .encode(serde_json::to_vec(&mdoc_payload).ok()?)
+            }
+            CredentialFormats::Unknown => return None,
+        };
 
         let credential_id = Uuid::new_v4().to_string();
         let tenant_pool = inner.tenant_pool.clone();

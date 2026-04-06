@@ -1,0 +1,21 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[database]
+admin_url = "postgres://postgres:postgres@localhost:5432/openid4vc_admin"
+max_connections = 20
+
+[redis]
+url = "redis://localhost:6379"
+
+[security]
+jwt_issuer = "https://auth.example.com"
+jwt_audience = "openid4vc-backend"
+jwt_public_key_pem = "-----BEGIN PUBLIC KEY-----\nREPLACE_ME\n-----END PUBLIC KEY-----"
+
+[key_management]
+backend = "file"
+file_base_path = ".keys"
+vault_addr = "http://localhost:8200"
+vault_token = "dev-token"

@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: openid4vc_admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  vault:
+    image: hashicorp/vault:1.17
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "8200:8200"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      OID4VC_BACKEND__SERVER__HOST: 0.0.0.0
+      OID4VC_BACKEND__SERVER__PORT: 8080
+      OID4VC_BACKEND__DATABASE__ADMIN_URL: postgres://postgres:postgres@postgres:5432/openid4vc_admin
+      OID4VC_BACKEND__DATABASE__MAX_CONNECTIONS: 20
+      OID4VC_BACKEND__REDIS__URL: redis://redis:6379
+      OID4VC_BACKEND__SECURITY__JWT_ISSUER: https://auth.example.com
+      OID4VC_BACKEND__SECURITY__JWT_AUDIENCE: openid4vc-backend
+      OID4VC_BACKEND__SECURITY__JWT_PUBLIC_KEY_PEM: "-----BEGIN PUBLIC KEY-----\\nREPLACE_ME\\n-----END PUBLIC KEY-----"
+      OID4VC_BACKEND__KEY_MANAGEMENT__BACKEND: file
+      OID4VC_BACKEND__KEY_MANAGEMENT__FILE_BASE_PATH: /app/.keys
+      OID4VC_BACKEND__KEY_MANAGEMENT__VAULT_ADDR: http://vault:8200
+      OID4VC_BACKEND__KEY_MANAGEMENT__VAULT_TOKEN: dev-token
+      RUST_LOG: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

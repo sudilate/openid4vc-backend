@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openid4vc-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: openid4vc-backend
+  template:
+    metadata:
+      labels:
+        app: openid4vc-backend
+    spec:
+      containers:
+        - name: openid4vc-backend
+          image: openid4vc-backend:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: openid4vc-backend-config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080

@@ -40,12 +40,27 @@ url = { version = "2.5", features = ["serde"] }
 urlencoding = "2.1"
 uuid = { version = "1.8", features = ["v4", "serde"] }
 
-# Local OpenID4VC crates
-oid4vc-manager = { path = "../openid4vc/oid4vc-manager" }
-oid4vc-core = { path = "../openid4vc/oid4vc-core" }
-oid4vci = { path = "../openid4vc/oid4vci" }
-oid4vp = { path = "../openid4vc/oid4vp" }
-siopv2 = { path = "../openid4vc/siopv2" }
+# OpenID4VC crates pinned to sudilate/openid4vc
+oid4vc-manager = { git = "https://github.com/sudilate/openid4vc", rev = "7bb7d529acb4e9b6919d3e07e4ddbcda71b91a6b" }
+oid4vc-core = { git = "https://github.com/sudilate/openid4vc", rev = "7bb7d529acb4e9b6919d3e07e4ddbcda71b91a6b" }
+oid4vci = { git = "https://github.com/sudilate/openid4vc", rev = "7bb7d529acb4e9b6919d3e07e4ddbcda71b91a6b" }
+oid4vp = { git = "https://github.com/sudilate/openid4vc", rev = "7bb7d529acb4e9b6919d3e07e4ddbcda71b91a6b" }
+siopv2 = { git = "https://github.com/sudilate/openid4vc", rev = "7bb7d529acb4e9b6919d3e07e4ddbcda71b91a6b" }
 
 [dev-dependencies]
 tokio-test = "0.4"
+
+[patch.'https://github.com/iotaledger/identity']
+identity_core = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_credential = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_did = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_document = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_iota = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_jose = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_storage = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_verification = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_ecdsa_verifier = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+identity_eddsa_verifier = { git = "https://github.com/impierce/identity.rs", rev = "0422797b" }
+
+[patch.crates-io]
+sd-jwt = { git = "https://github.com/impierce/sd-jwt-payload", rev = "f28789a", package = "sd-jwt-payload" }

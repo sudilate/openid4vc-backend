@@ -40,9 +40,9 @@ impl TenantDatabasePool {
             .connect(&db_url)
             .await?;
 
-        sqlx::query("SET app.current_tenant_id = $1")
+        let _ = sqlx::query_scalar::<_, String>("SELECT set_config('app.current_tenant_id', $1, false)")
             .bind(tenant_id.to_string())
-            .execute(&pool)
+            .fetch_one(&pool)
             .await?;
 
         self.inner.write().await.insert(tenant_id, pool.clone());

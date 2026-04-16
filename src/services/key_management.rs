@@ -44,8 +44,9 @@ impl KeyManagementService {
             "SELECT seed_hex FROM tenant_issuer_keys WHERE tenant_id = $1 AND is_primary = true AND status = 'active' ORDER BY created_at DESC LIMIT 1",
         )
         .bind(tenant_id)
-        .fetch_one(&self.admin_pool)
-        .await?;
+        .fetch_optional(&self.admin_pool)
+        .await?
+        .flatten();
 
         let seed = match maybe_seed {
             Some(seed_hex) => decode_seed(&seed_hex)?,

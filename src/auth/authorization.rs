@@ -134,7 +134,7 @@ impl AuthorizationService {
         oso.register_class(PolicyUser::get_polar_class_builder().name("User").build())?;
         oso.register_class(
             PolicyResource::get_polar_class_builder()
-                .name("Resource")
+                .name("PolicyResource")
                 .build(),
         )?;
         oso.load_files(vec![self.policy_file.as_str()])?;
